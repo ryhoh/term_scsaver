@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 from os import system
+from random import random
 import shutil
 from time import sleep
 
@@ -7,13 +10,13 @@ EMPTY = 0
 GLASS = 1
 BEER = 2
 BUBBLE = 3
-# BUBBLE_TOP = 4
+BLACK_BEER = 4
 TEXTURE = [
     " ",
     "█",
     "\u001b[00;33m█\u001b[00m",
     "\u001b[00;37m█\u001b[00m",
-    # "\u001b[00;37m▂\u001b[00m",
+    "\u001b[00;30m█\u001b[00m",
 ]
 WAVE_TOP = [
     " ",
@@ -65,7 +68,6 @@ class Beer:
             TEXTURE[EMPTY],
             TEXTURE[EMPTY]
         ])
-        print(self.array)
         # あふれそうな泡を表すパラメータ
         self.delta_x = 0
         # 取っ手
@@ -74,14 +76,23 @@ class Beer:
         self.array[7][-1] = self.array[7][-2] = TEXTURE[GLASS]
 
         self.top = None
+        self.is_black = False  # 稀に黒ビールになる
 
     def __str__(self) -> str:
         return '%s\n' % ('\n'.join(''.join(row) for row in self.array))
 
-    def fill(self, interval_ms: int = 500) -> int:
+    def partial_write(self, update_line: int):
+        row_shift = 11 - update_line
+        print('\033[%sA\r%s\n\033[%sB' % (row_shift, ''.join(self.array[update_line]), row_shift), end='')
+
+    def fill(self, interval_ms: int = 500):
         """
         泡を波うたせながら，interval_ms ずつかけてビールを注ぐ
         """
+        # 確率で黒ビールになる
+        self.is_black = True if random() < 0.02 else False
+        BEER_TEXTURE = TEXTURE[BLACK_BEER] if self.is_black else TEXTURE[BEER]
+        
         while self.top is None or self.top > 1:
             self.delta_x += 1
             if self.top is None:
@@ -93,11 +104,15 @@ class Beer:
             if self.top + 1 < len(self.array) - 1:
                 self.array[self.top + 1][1:1 + self.diameter] = [TEXTURE[BUBBLE] for _ in range(self.diameter)]
             if self.top + 2 < len(self.array) - 1:
-                self.array[self.top + 2][1:1 + self.diameter] = [TEXTURE[BEER] for _ in range(self.diameter)]
+                self.array[self.top + 2][1:1 + self.diameter] = [BEER_TEXTURE for _ in range(self.diameter)]
             
             self.wave(self.top - 1)
-            system('clear')
-            print(self)
+            self.partial_write(self.top - 1)
+            self.partial_write(self.top)
+            if self.top + 1 < len(self.array) - 1:
+                self.partial_write(self.top + 1)
+            if self.top + 2 < len(self.array) - 1:
+                self.partial_write(self.top + 2)
             sleep(interval_ms / 1000)
 
     # 正弦波風に揺らしたいな〜
@@ -111,8 +126,8 @@ class Beer:
         while self.delta_x < end:
             self.delta_x += 1
             self.wave(top_altitude)
-            system('clear')
-            print(self)
+            self.partial_write(top_altitude)
+            self.partial_write(top_altitude + 1)
             sleep(interval_ms / 1000)
 
     def drink(self, interval_ms: int = 500) -> int:
@@ -131,25 +146,26 @@ class Beer:
                 self.array[self.top + 1][1:1 + self.diameter] = [TEXTURE[BUBBLE] for _ in range(self.diameter)]
             if self.top + 1 < len(self.array):
                 self.wave(self.top - 1)
-            system('clear')
-            print(self)
+            self.partial_write(self.top - 2)
+            self.partial_write(self.top - 1)
+            if self.top + 1 < len(self.array) - 1:
+                self.partial_write(self.top + 1)
+            if self.top + 1 < len(self.array):
+                self.partial_write(self.top)
             sleep(interval_ms / 1000)
         self.top = None
 
 
 def beer():
+    beer = Beer()
     while True:
-        ts = shutil.get_terminal_size()
-        height, width = ts.lines, ts.columns
-        height -= 2
-
-        height = max(height, 5)
-        width = max(width, 5)
-        beer = Beer()
+        print(beer)
         beer.fill()
         beer.keep_waving(0, 10)
         beer.drink()
         sleep(5)
+        system('clear')
+        print('\n' * shutil.get_terminal_size().lines)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
 
 
 if __name__ == '__main__':

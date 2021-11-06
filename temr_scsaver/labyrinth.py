@@ -1,8 +1,9 @@
-from os import system
+#!/usr/bin/env python3
+
 from random import randrange, sample
 import shutil
 from time import sleep
-from typing import Final
+from typing import Final, List, Set, Tuple
 
 
 EMPTY = 0
@@ -29,17 +30,14 @@ class Labyrinth:
         self.array = [[TEXTURE[WALL] for _ in range(width)] for _ in range(height)]
         self.start = None
         self.goal = None
-        self.line_cache = [None for _ in range(width)]
 
     def __str__(self) -> str:
         return '%s\n' % '\n'.join(''.join(self.array[y]) for y in range(self.height))
 
-    # def cached_str(self, updated_line: int) -> str:
-    #     # buff = '\r\b' * (self.height - updated_line + 1)
-    #     return '%s%s\n' % (
-    #         '\r\b' * (self.height - updated_line + 1),
-    #         '\n'.join(''.join(self.array[y]) for y in range(updated_line, self.height))
-    #     )
+    def partial_write(self, update_line: int):
+        row_shift = self.height - update_line + 1
+        print('\033[%sA\r%s\n\033[%sB' % (row_shift, ''.join(self.array[update_line]), row_shift), end='')
+
 
     def dig(self, interval_ms: int = 50):
         open_cells = []  # 枝分かれする（可能性のある）マスをここに詰め込む
@@ -70,7 +68,8 @@ class Labyrinth:
                     here = (next2_x, next2_y)  # 次の開始地点
                     open_cells.append(here)
                     found = True
-                    print(self)
+                    self.partial_write(next1_y)
+                    self.partial_write(next2_y)
                     sleep(interval_ms / 1000)
                     break
             if not found:
@@ -93,8 +92,10 @@ class Labyrinth:
             self.array[candidate_1[1]][candidate_1[0]] = TEXTURE[GOAL]
             self.start = candidate_2
             self.goal = candidate_1
+        self.partial_write(candidate_1[1])
+        self.partial_write(candidate_2[1])
 
-    def selectEmptyRandomly(self) -> tuple[int, int]:
+    def selectEmptyRandomly(self) -> Tuple[int, int]:
         while True:  # バグがなければ，1回で必ず終わるはず
             x = randrange((self.width - 1) // 2) * 2 + 1
             y = randrange((self.height - 1) // 2) * 2 + 1
@@ -106,13 +107,13 @@ class Labyrinth:
                 if self.array[next1_y][next1_x] == TEXTURE[EMPTY]:
                     return next1_x, next1_y
 
-    def farthest_from(self, coordinate_from: tuple[int, int]) -> tuple[int, int]:
+    def farthest_from(self, coordinate_from: Tuple[int, int]) -> Tuple[int, int]:
         """
         一番遠い場所を BFS で見つける
         """
-        queue: list[tuple[int, int]] = [coordinate_from]
-        checked: set[tuple[int, int]] = set()
-        result: tuple[int, int] = coordinate_from
+        queue: List[Tuple[int, int]] = [coordinate_from]
+        checked: Set[Tuple[int, int]] = set()
+        result: Tuple[int, int] = coordinate_from
         while len(queue):
             here = queue.pop(0)
             if here in checked:
@@ -131,7 +132,7 @@ class Labyrinth:
         """
         DFS で解くところを，1手 interval_ms かけながら見せる
         """
-        stack: list[tuple[int, int]] = [self.start]
+        stack: List[Tuple[int, int]] = [self.start]
         while len(stack):
             here = stack.pop()
             if here != self.start:
@@ -145,8 +146,7 @@ class Labyrinth:
                 if self.array[next1_y][next1_x] in (TEXTURE[WALL], TEXTURE[START], TEXTURE[TRAIL]):
                     continue
                 stack.append((next1_x, next1_y))
-            system('clear')
-            print(self)
+            self.partial_write(here[1])
             sleep(interval_ms / 1000)
             
 
@@ -160,6 +160,7 @@ def labyrinth():
         if height % 2 == 0:
             height -= 1
         labyrinth = Labyrinth(width, height)
+        print(labyrinth)
         labyrinth.dig()
         labyrinth.placeStartGoal()
         labyrinth.solve()
