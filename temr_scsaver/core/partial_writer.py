@@ -23,11 +23,11 @@ class PartialWriter:
             print('\033[1B\r', end='')
         print('\033[1B\r', end='')
 
-    def set_line_updated_range(self, row_i: int, range: Tuple[int, int]):
+    def set_line_updated_range(self, row_i: int, update_range: Tuple[int, int]):
         row_i = row_i % self.height
         if self.line_updated_range[row_i] is None:  # その行の更新がまだないなら
-            self.line_updated_range[row_i] = range
+            self.line_updated_range[row_i] = update_range
             return None
         # その行に他の更新があるなら，両方の更新の範囲を含む最小の範囲を設定する
         prev_begin, prev_end = self.line_updated_range[row_i]
-        self.line_updated_range[row_i] = (min(range[0], prev_begin), max(range[1], prev_end))
+        self.line_updated_range[row_i] = (min(update_range[0], prev_begin), max(update_range[1], prev_end))
