@@ -50,7 +50,12 @@ class Keihan(Train):
         "\u001b[02;39m█\u001b[00m",
         "\u001b[00;32m█\u001b[00m",
     ]
-    CAR_LENGTH = 18 * 3 - 1  # メートル * 定数 - 調整項
+    CAR_LENGTH = 18 * 3 - 2  # メートル * 定数 - 調整項
+
+    def __init__(self, car_n: int = 4) -> None:
+        super().__init__()
+        self.car_n = car_n
+        self.f_length = self.CAR_LENGTH * car_n + 4 * (car_n - 1)
 
     def put(self, env: "Environment", pos: int = 0):
         """
@@ -62,90 +67,137 @@ class Keihan(Train):
         # PartialWriter 用の更新範囲リスト
         partial_write_res = []
 
-        # 先頭の位置
-        front_pos = env.platform_range[0] + 1 + pos
+        for car_i in range(self.car_n):
+            # 先頭の位置
+            front_pos = env.platform_range[0] + 1 + pos + (Keihan.CAR_LENGTH + 4) * car_i
 
-        # 車体の1マス後ろをリセット
-        if 0 <= front_pos + Keihan.CAR_LENGTH + 1 < env.width:
-            for row_i in range(2, 7):
-                env.array[row_i][front_pos + Keihan.CAR_LENGTH + 1] = EMPTY_TEXTURE
-                partial_write_res.append((row_i, (front_pos + Keihan.CAR_LENGTH + 1, front_pos + Keihan.CAR_LENGTH + 2)))
-        # 車両
-        for row_i in range(2, 5):  # 車体上部
+            # 車体の1マス後ろをリセット
+            if 0 <= front_pos + Keihan.CAR_LENGTH + 1 < env.width:
+                for row_i in range(2, 7):
+                    env.array[row_i][front_pos + Keihan.CAR_LENGTH + 1] = EMPTY_TEXTURE
+                    partial_write_res.append((row_i, (front_pos + Keihan.CAR_LENGTH + 1, front_pos + Keihan.CAR_LENGTH + 2)))
+            # 車両
+            for row_i in range(2, 5):  # 車体上部
+                left, right = max(min(front_pos, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
+                env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_COLOR] for _ in range(right - left)]
+                partial_write_res.append((row_i, (left, right)))
+            for row_i in range(5, 7):  # 車体下部
+                left, right = max(min(front_pos, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
+                env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_BASE] for _ in range(right - left)]
+                partial_write_res.append((row_i, (left, right)))
+            # 帯
             left, right = max(min(front_pos, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
-            env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_COLOR] for _ in range(right - left)]
-            partial_write_res.append((row_i, (left, right)))
-        for row_i in range(5, 7):  # 車体下部
-            left, right = max(min(front_pos, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
-            env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_BASE] for _ in range(right - left)]
-            partial_write_res.append((row_i, (left, right)))
-        # 帯
-        left, right = max(min(front_pos, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
-        env.array[5][left: right] = [Keihan.TEXTURE[ACCENT_COLOR] for _ in range(right - left)]
-        partial_write_res.append((5, (left, right)))
-        # パンタグラフ
-        if 0 <= front_pos + 10 < env.width:
-            env.array[0][front_pos + 10] = "\u001b[02;39m▗\u001b[00m"
-            env.array[1][front_pos + 10] = "\u001b[02;39m▚\u001b[00m"
-            partial_write_res.append((0, (front_pos + 10, front_pos + 11)))
-            partial_write_res.append((1, (front_pos + 10, front_pos + 11)))
-        # パンタグラフの1マス後ろをリセット
-        if 0 <= front_pos + 11 < env.width:
-            env.array[0][front_pos + 11] = EMPTY_TEXTURE
-            env.array[1][front_pos + 11] = EMPTY_TEXTURE
-            partial_write_res.append((0, (front_pos + 11, front_pos + 12)))
-            partial_write_res.append((1, (front_pos + 11, front_pos + 12)))
-        
-        for row_i in range(3, 7):  # ドア
-            if row_i == 5 or row_i == 6:  # ドア下部
-                for door_i in range(7, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH // 3):
-                    left, right = max(min(front_pos + door_i, env.width), 0), max(min(front_pos + door_i + 5, env.width), 0)
+            env.array[5][left: right] = [Keihan.TEXTURE[ACCENT_COLOR] for _ in range(right - left)]
+            partial_write_res.append((5, (left, right)))
+
+            if car_i == 0:  # パンタグラフ
+                if 0 <= front_pos + 10 < env.width:
+                    env.array[0][front_pos + 10] = "\u001b[02;39m▗\u001b[00m"
+                    env.array[1][front_pos + 10] = "\u001b[02;39m▚\u001b[00m"
+                    partial_write_res.append((0, (front_pos + 10, front_pos + 11)))
+                    partial_write_res.append((1, (front_pos + 10, front_pos + 11)))
+                if 0 <= front_pos + self.CAR_LENGTH - 10 < env.width:
+                    env.array[0][front_pos + self.CAR_LENGTH - 10] = "\u001b[02;39m▖\u001b[00m"
+                    env.array[1][front_pos + self.CAR_LENGTH - 10] = "\u001b[02;39m▞\u001b[00m"
+                    partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
+                    partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
+                # パンタグラフの1マス後ろをリセット
+                if 0 <= front_pos + 11 < env.width:
+                    env.array[0][front_pos + 11] = EMPTY_TEXTURE
+                    env.array[1][front_pos + 11] = EMPTY_TEXTURE
+                    partial_write_res.append((0, (front_pos + 11, front_pos + 12)))
+                    partial_write_res.append((1, (front_pos + 11, front_pos + 12)))
+                if 0 <= front_pos + self.CAR_LENGTH - 9 < env.width:
+                    env.array[0][front_pos + self.CAR_LENGTH - 9] = EMPTY_TEXTURE
+                    env.array[1][front_pos + self.CAR_LENGTH - 9] = EMPTY_TEXTURE
+                    partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
+                    partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
+
+            for row_i in range(3, 7):  # ドア
+                if row_i == 5 or row_i == 6:  # ドア下部
+                    for door_i in range(7, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH // 3):
+                        left, right = max(min(front_pos + door_i, env.width), 0), max(min(front_pos + door_i + 5, env.width), 0)
+                        env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                        partial_write_res.append((row_i, (left, right)))
+                else:  # ドア上部
+                    for door_i in range(7, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH // 3):
+                        textures = [Keihan.TEXTURE[TRAIN_DOOR], Keihan.TEXTURE[TRAIN_GLASS], Keihan.TEXTURE[GRAY_PARTS], Keihan.TEXTURE[TRAIN_GLASS], Keihan.TEXTURE[TRAIN_DOOR]]
+                        for col_i, texture in enumerate(textures, start=front_pos + door_i):
+                            if 0 <= col_i < env.width:
+                                env.array[row_i][col_i] = texture
+                                partial_write_res.append((row_i, (col_i, col_i + 1)))
+                if car_i == 0:  # 乗務員用扉
+                    left, right = max(min(front_pos + 1, env.width), 0), max(min(front_pos + 3, env.width), 0)
                     env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
                     partial_write_res.append((row_i, (left, right)))
-            else:  # ドア上部
-                for door_i in range(7, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH // 3):
-                    textures = [Keihan.TEXTURE[TRAIN_DOOR], Keihan.TEXTURE[TRAIN_GLASS], Keihan.TEXTURE[GRAY_PARTS], Keihan.TEXTURE[TRAIN_GLASS], Keihan.TEXTURE[TRAIN_DOOR]]
-                    for col_i, texture in enumerate(textures, start=front_pos + door_i):
-                        if 0 <= col_i < env.width:
-                            env.array[row_i][col_i] = texture
-                            partial_write_res.append((row_i, (col_i, col_i + 1)))
-            # 乗務員用扉
-            left, right = max(min(front_pos + 1, env.width), 0), max(min(front_pos + 3, env.width), 0)
-            env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
-            partial_write_res.append((row_i, (left, right)))
+                elif car_i == self.car_n - 1:
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH - 2, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+                    # ボディが上書きされるので，もう一度ボディを1列描画する
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH + 1, env.width), 0)
+                    for row_i in range(3, 5):  # 車体上部
+                        env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_COLOR] for _ in range(right - left)]
+                        partial_write_res.append((row_i, (left, right)))
+                    for row_i in range(6, 7):  # 車体下部
+                        env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_BASE] for _ in range(right - left)]
+                        partial_write_res.append((row_i, (left, right)))
+                    env.array[5][left: right] = [Keihan.TEXTURE[ACCENT_COLOR] for _ in range(right - left)]  # 帯
 
-        for row_i in range(3, 5):  # 窓
-            for glass_i in range(14, Keihan.CAR_LENGTH * 2 // 3, Keihan.CAR_LENGTH // 3):
-                left, right = max(min(front_pos + glass_i, env.width), 0), max(min(front_pos + glass_i + 3, env.width), 0)
-                env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                partial_write_res.append((row_i, (left, right)))
-                left, right = max(min(front_pos + glass_i + 5, env.width), 0), max(min(front_pos + glass_i + 8, env.width), 0)
-                env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                partial_write_res.append((row_i, (left, right)))
+                        
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH - 1, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
 
-            # 前後の窓
-            left, right = max(min(front_pos + 4, env.width), 0), max(min(front_pos + 6, env.width), 0)
-            env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-            partial_write_res.append((row_i, (left, right)))
-            left, right = max(min(front_pos + Keihan.CAR_LENGTH - 5, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH - 2, env.width), 0)
-            env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-            partial_write_res.append((row_i, (left, right)))
+            for row_i in range(3, 5):  # 窓
+                for glass_i in range(14, Keihan.CAR_LENGTH * 2 // 3, Keihan.CAR_LENGTH // 3):
+                    left, right = max(min(front_pos + glass_i, env.width), 0), max(min(front_pos + glass_i + 3, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+                    left, right = max(min(front_pos + glass_i + 5, env.width), 0), max(min(front_pos + glass_i + 8, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
 
-        # 車輪
-        for col_i in range(6, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH * 2 // 3 + 1):
-            if 0 <= front_pos + col_i < env.width // 4:
-                env.array[7][front_pos + col_i] = WHEEL_TEXTURE
-                partial_write_res.append((7, (front_pos + col_i, front_pos + col_i + 1)))
-            if 0 <= front_pos + col_i + 4 < env.width // 4:
-                env.array[7][front_pos + col_i + 4] = WHEEL_TEXTURE
-                partial_write_res.append((7, (front_pos + col_i + 4, front_pos + col_i + 5)))
-            # 車輪の1マス後ろをリセット
-            if 0 <= front_pos + col_i + 1 < env.width // 4:
-                env.array[7][front_pos + col_i + 1] = EMPTY_TEXTURE
-                partial_write_res.append((7, (front_pos + col_i + 1, front_pos + col_i + 2)))
-            if 0 <= front_pos + col_i + 5 < env.width // 4:
-                env.array[7][front_pos + col_i + 5] = EMPTY_TEXTURE
-                partial_write_res.append((7, (front_pos + col_i + 5, front_pos + col_i + 6)))
+                # 前後の窓
+                if car_i == 0:
+                    left, right = max(min(front_pos + 4, env.width), 0), max(min(front_pos + 6, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+                else:
+                    left, right = max(min(front_pos + 2, env.width), 0), max(min(front_pos + 5, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+                if car_i != self.car_n - 1:
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH - 4, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH - 1, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+                else:
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH - 5, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH - 3, env.width), 0)
+                    env.array[row_i][left: right] = [Keihan.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
+                    partial_write_res.append((row_i, (left, right)))
+
+                # 貫通路
+                if car_i != self.car_n - 1:
+                    left, right = max(min(front_pos + Keihan.CAR_LENGTH + 1, env.width), 0), max(min(front_pos + Keihan.CAR_LENGTH + 5, env.width), 0)
+                    for row_i in range(3, 7):
+                        env.array[row_i][left: right] = [Keihan.TEXTURE[GRAY_PARTS] for _ in range(right - left)]
+                        partial_write_res.append((row_i, (left, right)))
+
+            # 車輪
+            for col_i in range(6, Keihan.CAR_LENGTH, Keihan.CAR_LENGTH * 2 // 3 + 1):
+                if 0 <= front_pos + col_i < env.width // 4:
+                    env.array[7][front_pos + col_i] = WHEEL_TEXTURE
+                    partial_write_res.append((7, (front_pos + col_i, front_pos + col_i + 1)))
+                if 0 <= front_pos + col_i + 4 < env.width // 4:
+                    env.array[7][front_pos + col_i + 4] = WHEEL_TEXTURE
+                    partial_write_res.append((7, (front_pos + col_i + 4, front_pos + col_i + 5)))
+                # 車輪の1マス後ろをリセット
+                if 0 <= front_pos + col_i + 1 < env.width // 4:
+                    env.array[7][front_pos + col_i + 1] = EMPTY_TEXTURE
+                    partial_write_res.append((7, (front_pos + col_i + 1, front_pos + col_i + 2)))
+                if 0 <= front_pos + col_i + 5 < env.width // 4:
+                    env.array[7][front_pos + col_i + 5] = EMPTY_TEXTURE
+                    partial_write_res.append((7, (front_pos + col_i + 5, front_pos + col_i + 6)))
         
         return partial_write_res
 
@@ -277,9 +329,9 @@ def train():
         env = Environment(width)
         train = Keihan()
         print(env)
-        env.stopping(50, train)
+        env.stopping(width * 3 // 4, train)
         sleep(2)
-        env.leaving(-100, train)
+        env.leaving(-train.f_length - width // 4 - 3, train)
         sleep(5)
 
 
