@@ -40,7 +40,7 @@ WAVE_BUTTOM = [
 
 class Beer(PartialWriter):
     def __init__(self) -> None:
-        super().__init__(height=11)
+        super().__init__(height=10)
         self.diameter = 8
         self.array = [[TEXTURE[EMPTY] for _ in range(12)]]
         self.array.extend([[

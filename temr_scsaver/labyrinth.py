@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+from os import system
 from random import randrange, sample
 import shutil
 from time import sleep
 from typing import Final, List, Set, Tuple
+
+from core.partial_writer import PartialWriter
 
 
 EMPTY = 0
@@ -23,8 +26,9 @@ dx = [-1, 1, 0, 0]
 dy = [0, 0, -1, 1]
 
 
-class Labyrinth:
+class Labyrinth(PartialWriter):
     def __init__(self, width: int, height: int) -> None:
+        super().__init__(height)
         self.width: Final[int] = width
         self.height: Final[int] = height
         self.array = [[TEXTURE[WALL] for _ in range(width)] for _ in range(height)]
@@ -33,11 +37,6 @@ class Labyrinth:
 
     def __str__(self) -> str:
         return '%s\n' % '\n'.join(''.join(self.array[y]) for y in range(self.height))
-
-    def partial_write(self, update_line: int):
-        row_shift = self.height - update_line + 1
-        print('\033[%sA\r%s\n\033[%sB' % (row_shift, ''.join(self.array[update_line]), row_shift), end='')
-
 
     def dig(self, interval_ms: int = 50):
         open_cells = []  # 枝分かれする（可能性のある）マスをここに詰め込む
@@ -68,8 +67,9 @@ class Labyrinth:
                     here = (next2_x, next2_y)  # 次の開始地点
                     open_cells.append(here)
                     found = True
-                    self.partial_write(next1_y)
-                    self.partial_write(next2_y)
+                    self.set_line_updated_range(next1_y, (next1_x, next1_x + 1))
+                    self.set_line_updated_range(next2_y, (next2_x, next2_x + 1))
+                    self.partial_write()
                     sleep(interval_ms / 1000)
                     break
             if not found:
@@ -92,8 +92,9 @@ class Labyrinth:
             self.array[candidate_1[1]][candidate_1[0]] = TEXTURE[GOAL]
             self.start = candidate_2
             self.goal = candidate_1
-        self.partial_write(candidate_1[1])
-        self.partial_write(candidate_2[1])
+        self.set_line_updated_range(candidate_1[1], (candidate_1[0], candidate_1[0] + 1))
+        self.set_line_updated_range(candidate_2[1], (candidate_2[0], candidate_2[0] + 1))
+        self.partial_write()
 
     def selectEmptyRandomly(self) -> Tuple[int, int]:
         while True:  # バグがなければ，1回で必ず終わるはず
@@ -146,7 +147,8 @@ class Labyrinth:
                 if self.array[next1_y][next1_x] in (TEXTURE[WALL], TEXTURE[START], TEXTURE[TRAIL]):
                     continue
                 stack.append((next1_x, next1_y))
-            self.partial_write(here[1])
+            self.set_line_updated_range(here[1], (here[0], here[0] + 1))
+            self.partial_write()
             sleep(interval_ms / 1000)
             
 
