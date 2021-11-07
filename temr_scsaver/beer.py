@@ -78,12 +78,20 @@ class Beer:
         self.top = None
         self.is_black = False  # 稀に黒ビールになる
 
+        # 部分書き込み用
+        self.line_is_updated = [False for _ in range(len(self.array))]
+
     def __str__(self) -> str:
         return '%s\n' % ('\n'.join(''.join(row) for row in self.array))
 
-    def partial_write(self, update_line: int):
-        row_shift = 11 - update_line
-        print('\033[%sA\r%s\n\033[%sB' % (row_shift, ''.join(self.array[update_line]), row_shift), end='')
+    def partial_write(self):
+        print('\033[11A\r', end='')
+        for i in range(len(self.array)):
+            if self.line_is_updated[i]:
+                print(''.join(self.array[i]), end='')
+                self.line_is_updated[i] = False
+            print('\033[1B\r', end='')
+        print('\033[1B\r', end='')
 
     def fill(self, interval_ms: int = 500):
         """
@@ -107,12 +115,12 @@ class Beer:
                 self.array[self.top + 2][1:1 + self.diameter] = [BEER_TEXTURE for _ in range(self.diameter)]
             
             self.wave(self.top - 1)
-            self.partial_write(self.top - 1)
-            self.partial_write(self.top)
+            self.line_is_updated[self.top - 1] = self.line_is_updated[self.top] = True
             if self.top + 1 < len(self.array) - 1:
-                self.partial_write(self.top + 1)
+                self.line_is_updated[self.top + 1] = True
             if self.top + 2 < len(self.array) - 1:
-                self.partial_write(self.top + 2)
+                self.line_is_updated[self.top + 2] = True
+            self.partial_write()
             sleep(interval_ms / 1000)
 
     # 正弦波風に揺らしたいな〜
@@ -126,8 +134,8 @@ class Beer:
         while self.delta_x < end:
             self.delta_x += 1
             self.wave(top_altitude)
-            self.partial_write(top_altitude)
-            self.partial_write(top_altitude + 1)
+            self.line_is_updated[top_altitude] = self.line_is_updated[top_altitude + 1] = True
+            self.partial_write()
             sleep(interval_ms / 1000)
 
     def drink(self, interval_ms: int = 500) -> int:
@@ -146,12 +154,12 @@ class Beer:
                 self.array[self.top + 1][1:1 + self.diameter] = [TEXTURE[BUBBLE] for _ in range(self.diameter)]
             if self.top + 1 < len(self.array):
                 self.wave(self.top - 1)
-            self.partial_write(self.top - 2)
-            self.partial_write(self.top - 1)
+            self.line_is_updated[self.top - 2] = self.line_is_updated[self.top - 1] = True
             if self.top + 1 < len(self.array) - 1:
-                self.partial_write(self.top + 1)
+                self.line_is_updated[self.top + 1] = True
             if self.top + 1 < len(self.array):
-                self.partial_write(self.top)
+                self.line_is_updated[self.top] = True
+            self.partial_write()
             sleep(interval_ms / 1000)
         self.top = None
 
@@ -159,13 +167,13 @@ class Beer:
 def beer():
     beer = Beer()
     while True:
+        system('clear')
+        print('\n' * shutil.get_terminal_size().lines)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
         print(beer)
         beer.fill()
         beer.keep_waving(0, 10)
         beer.drink()
         sleep(5)
-        system('clear')
-        print('\n' * shutil.get_terminal_size().lines)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
 
 
 if __name__ == '__main__':
