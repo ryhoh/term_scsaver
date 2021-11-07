@@ -5,6 +5,8 @@ from random import random
 import shutil
 from time import sleep
 
+from core.partial_writer import PartialWriter
+
 
 EMPTY = 0
 GLASS = 1
@@ -36,8 +38,9 @@ WAVE_BUTTOM = [
 ]
 
 
-class Beer:
+class Beer(PartialWriter):
     def __init__(self) -> None:
+        super().__init__(height=11)
         self.diameter = 8
         self.array = [[TEXTURE[EMPTY] for _ in range(12)]]
         self.array.extend([[
@@ -78,23 +81,8 @@ class Beer:
         self.top = None
         self.is_black = False  # 稀に黒ビールになる
 
-        # 部分書き込み用 (begin, end)
-        self.line_updated_range = [None for _ in range(len(self.array))]
-
     def __str__(self) -> str:
         return '%s\n' % ('\n'.join(''.join(row) for row in self.array))
-
-    def partial_write(self):
-        print('\033[11A\r', end='')
-        for row_i in range(len(self.array)):
-            if self.line_updated_range[row_i] is not None:
-                begin, end = self.line_updated_range[row_i]
-                print('\033[%sC' % end, end='')  # 書き換え箇所の終わりにカーソル移動
-                print('\b' * (end - begin), end='')
-                print(''.join(self.array[row_i][begin: end]), end='')
-                self.line_updated_range[row_i] = None
-            print('\033[1B\r', end='')
-        print('\033[1B\r', end='')
 
     def fill(self, interval_ms: int = 500):
         """
@@ -116,13 +104,15 @@ class Beer:
                 self.array[self.top + 1][1:1 + self.diameter] = [TEXTURE[BUBBLE] for _ in range(self.diameter)]
             if self.top + 2 < len(self.array) - 1:
                 self.array[self.top + 2][1:1 + self.diameter] = [BEER_TEXTURE for _ in range(self.diameter)]
-            
             self.wave(self.top - 1)
-            self.line_updated_range[self.top - 1] = self.line_updated_range[self.top] = (1, 1 + self.diameter)
+
+            # 書き込み
+            self.set_line_updated_range(self.top - 1, (1, 1 + self.diameter))
+            self.set_line_updated_range(self.top, (1, 1 + self.diameter))
             if self.top + 1 < len(self.array) - 1:
-                self.line_updated_range[self.top + 1] = (1, 1 + self.diameter)
+                self.set_line_updated_range(self.top + 1, (1, 1 + self.diameter))
             if self.top + 2 < len(self.array) - 1:
-                self.line_updated_range[self.top + 2] = (1, 1 + self.diameter)
+                self.set_line_updated_range(self.top + 2, (1, 1 + self.diameter))
             self.partial_write()
             sleep(interval_ms / 1000)
 
@@ -137,7 +127,8 @@ class Beer:
         while self.delta_x < end:
             self.delta_x += 1
             self.wave(top_altitude)
-            self.line_updated_range[top_altitude] = self.line_updated_range[top_altitude + 1] = (1, 1 + self.diameter)
+            self.set_line_updated_range(top_altitude, (1, 1 + self.diameter))
+            self.set_line_updated_range(top_altitude + 1, (1, 1 + self.diameter))
             self.partial_write()
             sleep(interval_ms / 1000)
 
@@ -157,11 +148,14 @@ class Beer:
                 self.array[self.top + 1][1:1 + self.diameter] = [TEXTURE[BUBBLE] for _ in range(self.diameter)]
             if self.top + 1 < len(self.array):
                 self.wave(self.top - 1)
-            self.line_updated_range[self.top - 2] = self.line_updated_range[self.top - 1] = (1, 1 + self.diameter)
+            
+            # 書き込み
+            self.set_line_updated_range(self.top - 2, (1, 1 + self.diameter))
+            self.set_line_updated_range(self.top - 1, (1, 1 + self.diameter))
             if self.top + 1 < len(self.array) - 1:
-                self.line_updated_range[self.top + 1] = (1, 1 + self.diameter)
+                self.set_line_updated_range(self.top + 1, (1, 1 + self.diameter))
             if self.top + 1 < len(self.array):
-                self.line_updated_range[self.top] = (1, 1 + self.diameter)
+                self.set_line_updated_range(self.top, (1, 1 + self.diameter))
             self.partial_write()
             sleep(interval_ms / 1000)
         self.top = None
