@@ -1,26 +1,36 @@
+#!/usr/bin/env python3
+
 from os import system
 from random import choice
 import shutil
 from time import sleep
 from typing import Any, Final, List, Tuple
 
+from core.color import Color
 from core.partial_writer import PartialWriter
 
 
 EMPTY       = 0
 PLATFORM    = 1
-TRAIN_BASE  = 0
-TRAIN_COLOR = 1
-TRAIN_GLASS = 2
-TRAIN_DOOR  = 3
-GRAY_PARTS  = 4
-ACCENT_COLOR_1 = 5
-ACCENT_COLOR_2 = 6
 
-EMPTY_TEXTURE = " "
+TRAIN_BOTTOM  = 0
+TRAIN_TOP     = 1
+TRAIN_GLASS   = 2
+TRAIN_DOOR    = 3  # deprecated
+GRAY_PARTS    = 4
+TRAIN_BELT    = 5
+TRAIN_MIDDLE  = 6
+DOOR_MIDDLE   = 7
+DOOR_BELT     = 8
+DOOR_BOTTOM   = 9
+
+EMPTY_TEXTURE    = " "
 PLATFORM_TEXTURE = "█"
-# WHEEL_TEXTURE = "\u001b[02;39m●\u001b[00m"
-WHEEL_TEXTURES = ["\u001b[02;39m⊗\u001b[00m", "\u001b[02;39m⊕\u001b[00m"]
+WHEEL_TEXTURES = [
+    Color.char_256_colored('⊗', 242),
+    Color.char_256_colored('⊕', 242),
+]
+BOTTOM_EQUIPMENTS_TEXTURE = Color.char_256_colored('▀', 242)
 
 class Train:
     def put(self, env: "Environment", pos: int = 0) -> List[Tuple[Tuple[int, int]]]:
@@ -30,7 +40,7 @@ class Train:
         raise NotImplementedError
 
 
-class Odakyu(Train):
+class Odakyu(Train):  # WIP
     TEXTURE = [
         "\u001b[00;37m█\u001b[00m",
         "\u001b[00;34m█\u001b[00m",
@@ -57,6 +67,8 @@ class TrainWith3Doors(Train):
 
         （京阪っぽいカラーリング）
         """
+        # def write_range(row_i: int, begin: int, end: int)
+
         # PartialWriter 用の更新範囲リスト
         partial_write_res = []
 
@@ -72,30 +84,30 @@ class TrainWith3Doors(Train):
             # 車両
             for row_i in range(2, 3):  # 車体上部
                 left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_COLOR] for _ in range(right - left)]
+                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_TOP] for _ in range(right - left)]
                 partial_write_res.append((row_i, (left, right)))
             for row_i in range(3, 5):  # 車体中部
                 left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[ACCENT_COLOR_2] for _ in range(right - left)]
+                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_MIDDLE] for _ in range(right - left)]
                 partial_write_res.append((row_i, (left, right)))
             # 帯
             left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-            env.array[5][left: right] = [self.TEXTURE[ACCENT_COLOR_1] for _ in range(right - left)]
+            env.array[5][left: right] = [self.TEXTURE[TRAIN_BELT] for _ in range(right - left)]
             partial_write_res.append((5, (left, right)))
             for row_i in range(6, 7):  # 車体下部
                 left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BASE] for _ in range(right - left)]
+                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BOTTOM] for _ in range(right - left)]
                 partial_write_res.append((row_i, (left, right)))
 
             if car_i % 4 == 0:  # パンタグラフ
                 if 0 <= front_pos + 10 < env.width:
-                    env.array[0][front_pos + 10] = "\u001b[02;39m▗\u001b[00m"
-                    env.array[1][front_pos + 10] = "\u001b[02;39m▚\u001b[00m"
+                    env.array[0][front_pos + 10] = Color.char_256_colored('▗', 246)
+                    env.array[1][front_pos + 10] = Color.char_256_colored('▚', 246)
                     partial_write_res.append((0, (front_pos + 10, front_pos + 11)))
                     partial_write_res.append((1, (front_pos + 10, front_pos + 11)))
                 if 0 <= front_pos + self.CAR_LENGTH - 10 < env.width:
-                    env.array[0][front_pos + self.CAR_LENGTH - 10] = "\u001b[02;39m▖\u001b[00m"
-                    env.array[1][front_pos + self.CAR_LENGTH - 10] = "\u001b[02;39m▞\u001b[00m"
+                    env.array[0][front_pos + self.CAR_LENGTH - 10] = Color.char_256_colored('▖', 246)
+                    env.array[1][front_pos + self.CAR_LENGTH - 10] = Color.char_256_colored('▞', 246)
                     partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
                     partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
                 # パンタグラフの1マス後ろをリセット
@@ -110,40 +122,46 @@ class TrainWith3Doors(Train):
                     partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
                     partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
 
-            for row_i in range(3, 7):  # ドア
+            # ドア
+            try:
+                door_textures = [self.TEXTURE[7], self.TEXTURE[8], self.TEXTURE[9]]
+            except IndexError:
+                door_textures = [self.TEXTURE[TRAIN_DOOR] for _ in range(3)]
+            for row_i, texture in zip(range(3, 7), [door_textures[0], door_textures[0], door_textures[1], door_textures[2]]):
                 if row_i == 5 or row_i == 6:  # ドア下部
                     for door_i in range(7, self.CAR_LENGTH, self.CAR_LENGTH // 3):
                         left, right = max(min(front_pos + door_i, env.width), 0), max(min(front_pos + door_i + 5, env.width), 0)
-                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                        env.array[row_i][left: right] = [texture for _ in range(right - left)]
                         partial_write_res.append((row_i, (left, right)))
                 else:  # ドア上部
                     for door_i in range(7, self.CAR_LENGTH, self.CAR_LENGTH // 3):
-                        textures = [self.TEXTURE[TRAIN_DOOR], self.TEXTURE[TRAIN_GLASS], self.TEXTURE[GRAY_PARTS], self.TEXTURE[TRAIN_GLASS], self.TEXTURE[TRAIN_DOOR]]
+                        textures = [texture, self.TEXTURE[TRAIN_GLASS], texture, self.TEXTURE[TRAIN_GLASS], texture]
                         for col_i, texture in enumerate(textures, start=front_pos + door_i):
                             if 0 <= col_i < env.width:
                                 env.array[row_i][col_i] = texture
                                 partial_write_res.append((row_i, (col_i, col_i + 1)))
-                if car_i == 0:  # 乗務員用扉
+                if car_i == 0:  # 先頭の乗務員用扉
                     left, right = max(min(front_pos + 1, env.width), 0), max(min(front_pos + 3, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
                     partial_write_res.append((row_i, (left, right)))
                 elif car_i == self.car_n - 1:
                     left, right = max(min(front_pos + self.CAR_LENGTH - 2, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
                     partial_write_res.append((row_i, (left, right)))
                     # ボディが上書きされるので，もう一度ボディを1列描画する
                     left, right = max(min(front_pos + self.CAR_LENGTH, env.width), 0), max(min(front_pos + self.CAR_LENGTH + 1, env.width), 0)
-                    for row_i in range(3, 5):  # 車体上部
-                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_COLOR] for _ in range(right - left)]
+                    env.array[2][left: right] = [self.TEXTURE[TRAIN_TOP] for _ in range(right - left)]  # 車体上部
+                    for row_i in range(3, 5):  # 車体中部
+                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_MIDDLE] for _ in range(right - left)]
                         partial_write_res.append((row_i, (left, right)))
+                    env.array[5][left: right] = [self.TEXTURE[TRAIN_BELT] for _ in range(right - left)]  # 帯
                     for row_i in range(6, 7):  # 車体下部
-                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BASE] for _ in range(right - left)]
+                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BOTTOM] for _ in range(right - left)]
                         partial_write_res.append((row_i, (left, right)))
-                    env.array[5][left: right] = [self.TEXTURE[ACCENT_COLOR_1] for _ in range(right - left)]  # 帯
 
-                        
+                    # 末尾の乗務員用扉
                     left, right = max(min(front_pos + self.CAR_LENGTH - 1, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_DOOR] for _ in range(right - left)]
+                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
                     partial_write_res.append((row_i, (left, right)))
 
             for row_i in range(3, 5):  # 窓
@@ -195,85 +213,88 @@ class TrainWith3Doors(Train):
                 if 0 <= front_pos + col_i + 5 < env.width // 4:
                     env.array[7][front_pos + col_i + 5] = EMPTY_TEXTURE
                     partial_write_res.append((7, (front_pos + col_i + 5, front_pos + col_i + 6)))
+
+            # 床下機器
+            for col_i in range(18, self.CAR_LENGTH * 2 // 3, 6):
+                left, right = max(min(front_pos + col_i, env.width // 4), 0), max(min(front_pos + col_i + 3, env.width // 4), 0)
+                env.array[7][left: right] = [BOTTOM_EQUIPMENTS_TEXTURE for _ in range(right - left)]
+                partial_write_res.append((7, (front_pos + col_i, front_pos + col_i + 4)))
+                # 1マス後ろをリセット
+                if 0 <= front_pos + col_i + 4 < env.width // 4:
+                    env.array[7][front_pos + col_i + 4] = EMPTY_TEXTURE
+                    partial_write_res.append((7, (front_pos + col_i + 4, front_pos + col_i + 5)))
         
         return partial_write_res
 
 
 class Keihan(TrainWith3Doors):
     TEXTURE = [
-        "\u001b[00;37m█\u001b[00m",
-        "\u001b[02;32m█\u001b[00m",
-        "\u001b[01;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[00;32m█\u001b[00m",
-        "\u001b[02;32m█\u001b[00m",
+        Color.char_256_colored('█', 254),
+        Color.char_256_colored('█', 28),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 118),
+        Color.char_256_colored('█', 28),
+        Color.char_256_colored('█', 22),
+        Color.char_256_colored('█', 76),
+        Color.char_256_colored('█', 251),
     ]
 
-class OsakaLoop(TrainWith3Doors):  # WIP
+class OsakaLoop(TrainWith3Doors):
     TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[01;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[02;35m█\u001b[00m",
+        Color.char_256_colored('█', 208),
+        Color.char_256_colored('█', 208),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 208),
+        Color.char_256_colored('█', 208),
+        Color.char_256_colored('█', 166),
+        Color.char_256_colored('█', 166),
+        Color.char_256_colored('█', 166),
     ]
 
 class OsakaMetroMidosuji(TrainWith3Doors):
     TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[01;31m█\u001b[00m",
-        "\u001b[01;39m█\u001b[00m",
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 196),
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 248),
+        Color.char_256_colored('█', 160),
+        Color.char_256_colored('█', 248),
     ]
 
 class OsakaMetroChuo(TrainWith3Doors):
     TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[02;32m█\u001b[00m",
-        "\u001b[01;39m█\u001b[00m",
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 28),
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 248),
+        Color.char_256_colored('█', 22),
+        Color.char_256_colored('█', 248),
     ]
 
-class OsakaMetroYotsubashi(TrainWith3Doors):
+class Hankyu(TrainWith3Doors):
     TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[00;34m█\u001b[00m",
-        "\u001b[01;39m█\u001b[00m",
-    ]
-
-class OsakaMetroSennichimae(TrainWith3Doors):
-    TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[01;35m█\u001b[00m",
-        "\u001b[01;39m█\u001b[00m",
-    ]
-
-class OsakaMetroTanimachi(TrainWith3Doors):
-    TEXTURE = [
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;39m█\u001b[00m",
-        "\u001b[00;36m█\u001b[00m",
-        "\u001b[02;37m█\u001b[00m",
-        "\u001b[02;39m█\u001b[00m",
-        "\u001b[02;35m█\u001b[00m",
-        "\u001b[01;39m█\u001b[00m",
+        Color.char_256_colored('█', 88),
+        Color.char_256_colored('▄', 88, 251),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 88),
+        Color.char_256_colored('█', 88),
+        Color.char_256_colored('█', 52),
+        Color.char_256_colored('█', 52),
+        Color.char_256_colored('█', 52),
     ]
 
 
@@ -281,15 +302,13 @@ AVAILABLE_TRAINS = [
     Keihan,
     OsakaMetroMidosuji,
     OsakaMetroChuo,
-    OsakaMetroYotsubashi,
-    OsakaMetroSennichimae,
-    OsakaMetroTanimachi
+    Hankyu,
 ]
 
 
 class Environment(PartialWriter):
     def __init__(self, width: int) -> None:
-        super().__init__(height=9)
+        super().__init__(height=9, width=width)
         self.width: Final[int] = width // 4 * 4
         self.array = [[EMPTY_TEXTURE for _ in range(width)] for _ in range(7)]
         self.array.extend([
@@ -375,7 +394,7 @@ def train():
         system('clear')
         print('\n' * height)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
         env = Environment(width)
-        # train = OsakaMetroMidosuji()
+        # train = Hankyu()
         train = choice(AVAILABLE_TRAINS)()
         print(env)
         env.stopping(width * 3 // 4, train)
