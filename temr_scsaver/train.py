@@ -234,12 +234,27 @@ class Hankyu(TrainWith3Doors):
         Color.char_256_colored('█', 52),
     ]
 
+class Keikyu(TrainWith3Doors):
+    TEXTURE = [
+        Color.char_256_colored('█', 196),
+        Color.char_256_colored('█', 196),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('█', 196),
+        Color.char_256_colored('█', 254),
+        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 160),
+        Color.char_256_colored('█', 160),
+    ]
+
 
 AVAILABLE_TRAINS = [
     Keihan,
     OsakaMetroMidosuji,
     OsakaMetroChuo,
     Hankyu,
+    Keikyu,
 ]
 
 
@@ -331,7 +346,7 @@ def train():
         system('clear')
         print('\n' * height)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
         env = Environment(width)
-        # train = Hankyu()
+        # train = Keikyu()
         train = choice(AVAILABLE_TRAINS)()
         print(env)
         env.stopping(width * 3 // 4, train)
