@@ -67,162 +67,99 @@ class TrainWith3Doors(Train):
 
         （京阪っぽいカラーリング）
         """
-        # def write_range(row_i: int, begin: int, end: int)
-
         # PartialWriter 用の更新範囲リスト
         partial_write_res = []
+
+        def write_range(row_i: int, begin: int, end: int, fill_texture: str, end_lim: int = env.width):
+            # 範囲 [begin end) で書き込み
+            left, right = max(min(begin, end_lim), 0), max(min(end, end_lim), 0)
+            env.array[row_i][left: right] = [fill_texture for _ in range(right - left)]
+            partial_write_res.append((row_i, (left, right)))
+
+        def write_spot(row_i: int, col_i: int, fill_texture: str, end_lim: int = env.width):
+            # 特定の1マス (col_i, row_i) に書き込み
+            if 0 <= col_i < end_lim:
+                env.array[row_i][col_i] = fill_texture
+                partial_write_res.append((row_i, (col_i, col_i + 1)))
 
         for car_i in range(self.car_n):
             # 先頭の位置
             front_pos = env.platform_range[0] + 1 + pos + (self.CAR_LENGTH + 4) * car_i
 
-            # 車体の1マス後ろをリセット
-            if 0 <= front_pos + self.CAR_LENGTH + 1 < env.width:
-                for row_i in range(2, 7):
-                    env.array[row_i][front_pos + self.CAR_LENGTH + 1] = EMPTY_TEXTURE
-                    partial_write_res.append((row_i, (front_pos + self.CAR_LENGTH + 1, front_pos + self.CAR_LENGTH + 2)))
+            for row_i in range(2, 7):  # 車体の1マス後ろをリセット
+                write_spot(row_i, front_pos + self.CAR_LENGTH + 1, EMPTY_TEXTURE)
             # 車両
-            for row_i in range(2, 3):  # 車体上部
-                left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_TOP] for _ in range(right - left)]
-                partial_write_res.append((row_i, (left, right)))
+            write_range(2, front_pos, front_pos + self.CAR_LENGTH, self.TEXTURE[TRAIN_TOP])     # 車体上部
             for row_i in range(3, 5):  # 車体中部
-                left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_MIDDLE] for _ in range(right - left)]
-                partial_write_res.append((row_i, (left, right)))
-            # 帯
-            left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-            env.array[5][left: right] = [self.TEXTURE[TRAIN_BELT] for _ in range(right - left)]
-            partial_write_res.append((5, (left, right)))
-            for row_i in range(6, 7):  # 車体下部
-                left, right = max(min(front_pos, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BOTTOM] for _ in range(right - left)]
-                partial_write_res.append((row_i, (left, right)))
+                write_range(row_i, front_pos, front_pos + self.CAR_LENGTH, self.TEXTURE[TRAIN_MIDDLE])
+            write_range(5, front_pos, front_pos + self.CAR_LENGTH, self.TEXTURE[TRAIN_BELT])    # 帯
+            write_range(6, front_pos, front_pos + self.CAR_LENGTH, self.TEXTURE[TRAIN_BOTTOM])  # 車体下部
 
             if car_i % 4 == 0:  # パンタグラフ
-                if 0 <= front_pos + 10 < env.width:
-                    env.array[0][front_pos + 10] = Color.char_256_colored('▗', 246)
-                    env.array[1][front_pos + 10] = Color.char_256_colored('▚', 246)
-                    partial_write_res.append((0, (front_pos + 10, front_pos + 11)))
-                    partial_write_res.append((1, (front_pos + 10, front_pos + 11)))
-                if 0 <= front_pos + self.CAR_LENGTH - 10 < env.width:
-                    env.array[0][front_pos + self.CAR_LENGTH - 10] = Color.char_256_colored('▖', 246)
-                    env.array[1][front_pos + self.CAR_LENGTH - 10] = Color.char_256_colored('▞', 246)
-                    partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
-                    partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 10, front_pos + self.CAR_LENGTH - 9)))
+                write_spot(0, front_pos + 10, Color.char_256_colored('▗', 246))
+                write_spot(1, front_pos + 10, Color.char_256_colored('▚', 246))
+                write_spot(0, front_pos + self.CAR_LENGTH - 10, Color.char_256_colored('▖', 246))
+                write_spot(1, front_pos + self.CAR_LENGTH - 10, Color.char_256_colored('▞', 246))
                 # パンタグラフの1マス後ろをリセット
-                if 0 <= front_pos + 11 < env.width:
-                    env.array[0][front_pos + 11] = EMPTY_TEXTURE
-                    env.array[1][front_pos + 11] = EMPTY_TEXTURE
-                    partial_write_res.append((0, (front_pos + 11, front_pos + 12)))
-                    partial_write_res.append((1, (front_pos + 11, front_pos + 12)))
-                if 0 <= front_pos + self.CAR_LENGTH - 9 < env.width:
-                    env.array[0][front_pos + self.CAR_LENGTH - 9] = EMPTY_TEXTURE
-                    env.array[1][front_pos + self.CAR_LENGTH - 9] = EMPTY_TEXTURE
-                    partial_write_res.append((0, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
-                    partial_write_res.append((1, (front_pos + self.CAR_LENGTH - 9, front_pos + self.CAR_LENGTH - 8)))
+                write_spot(0, front_pos + 11, EMPTY_TEXTURE)
+                write_spot(1, front_pos + 11, EMPTY_TEXTURE)
+                write_spot(0, front_pos + self.CAR_LENGTH - 9, EMPTY_TEXTURE)
+                write_spot(1, front_pos + self.CAR_LENGTH - 9, EMPTY_TEXTURE)
 
-            # ドア
-            try:
+            try:  # ドア
                 door_textures = [self.TEXTURE[7], self.TEXTURE[8], self.TEXTURE[9]]
             except IndexError:
                 door_textures = [self.TEXTURE[TRAIN_DOOR] for _ in range(3)]
             for row_i, texture in zip(range(3, 7), [door_textures[0], door_textures[0], door_textures[1], door_textures[2]]):
                 if row_i == 5 or row_i == 6:  # ドア下部
                     for door_i in range(7, self.CAR_LENGTH, self.CAR_LENGTH // 3):
-                        left, right = max(min(front_pos + door_i, env.width), 0), max(min(front_pos + door_i + 5, env.width), 0)
-                        env.array[row_i][left: right] = [texture for _ in range(right - left)]
-                        partial_write_res.append((row_i, (left, right)))
+                        write_range(row_i, front_pos + door_i, front_pos + door_i + 5, texture)
                 else:  # ドア上部
                     for door_i in range(7, self.CAR_LENGTH, self.CAR_LENGTH // 3):
                         textures = [texture, self.TEXTURE[TRAIN_GLASS], texture, self.TEXTURE[TRAIN_GLASS], texture]
                         for col_i, texture in enumerate(textures, start=front_pos + door_i):
-                            if 0 <= col_i < env.width:
-                                env.array[row_i][col_i] = texture
-                                partial_write_res.append((row_i, (col_i, col_i + 1)))
+                            write_spot(row_i, col_i, texture)
+                
                 if car_i == 0:  # 先頭の乗務員用扉
-                    left, right = max(min(front_pos + 1, env.width), 0), max(min(front_pos + 3, env.width), 0)
-                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
+                    write_range(row_i, front_pos + 1, front_pos + 3, texture)
                 elif car_i == self.car_n - 1:
-                    left, right = max(min(front_pos + self.CAR_LENGTH - 2, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
-                    # ボディが上書きされるので，もう一度ボディを1列描画する
-                    left, right = max(min(front_pos + self.CAR_LENGTH, env.width), 0), max(min(front_pos + self.CAR_LENGTH + 1, env.width), 0)
-                    env.array[2][left: right] = [self.TEXTURE[TRAIN_TOP] for _ in range(right - left)]  # 車体上部
-                    for row_i in range(3, 5):  # 車体中部
-                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_MIDDLE] for _ in range(right - left)]
-                        partial_write_res.append((row_i, (left, right)))
-                    env.array[5][left: right] = [self.TEXTURE[TRAIN_BELT] for _ in range(right - left)]  # 帯
-                    for row_i in range(6, 7):  # 車体下部
-                        env.array[row_i][left: right] = [self.TEXTURE[TRAIN_BOTTOM] for _ in range(right - left)]
-                        partial_write_res.append((row_i, (left, right)))
-
+                    write_range(row_i, front_pos + self.CAR_LENGTH - 2, front_pos + self.CAR_LENGTH, texture)
                     # 末尾の乗務員用扉
-                    left, right = max(min(front_pos + self.CAR_LENGTH - 1, env.width), 0), max(min(front_pos + self.CAR_LENGTH, env.width), 0)
-                    env.array[row_i][left: right] = [texture for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
-
+                    write_range(row_i, front_pos + self.CAR_LENGTH - 1, front_pos + self.CAR_LENGTH, texture)
+                    # ボディが上書きされるので，もう一度ボディを1列描画する
+                    write_range(2, front_pos + self.CAR_LENGTH, front_pos + self.CAR_LENGTH + 1, self.TEXTURE[TRAIN_TOP])  # 車体上部
+                    for row_i in range(3, 5):  # 車体中部
+                        write_range(row_i, front_pos + self.CAR_LENGTH, front_pos + self.CAR_LENGTH + 1, self.TEXTURE[TRAIN_MIDDLE])
+                    write_range(5, front_pos + self.CAR_LENGTH, front_pos + self.CAR_LENGTH + 1, self.TEXTURE[TRAIN_BELT])  # 帯
+                    write_range(6, front_pos + self.CAR_LENGTH, front_pos + self.CAR_LENGTH + 1, self.TEXTURE[TRAIN_BOTTOM])  # 車体下部
+            
             for row_i in range(3, 5):  # 窓
                 for glass_i in range(14, self.CAR_LENGTH * 2 // 3, self.CAR_LENGTH // 3):
-                    left, right = max(min(front_pos + glass_i, env.width), 0), max(min(front_pos + glass_i + 3, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
-                    left, right = max(min(front_pos + glass_i + 5, env.width), 0), max(min(front_pos + glass_i + 8, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
-
-                # 前後の窓
-                if car_i == 0:
-                    left, right = max(min(front_pos + 4, env.width), 0), max(min(front_pos + 6, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
+                    write_range(row_i, front_pos + glass_i, front_pos + glass_i + 3, self.TEXTURE[TRAIN_GLASS])
+                    write_range(row_i, front_pos + glass_i + 5, front_pos + glass_i + 8, self.TEXTURE[TRAIN_GLASS])
+                if car_i == 0:  # 前後の窓
+                    write_range(row_i, front_pos + 4, front_pos + 6, self.TEXTURE[TRAIN_GLASS])
                 else:
-                    left, right = max(min(front_pos + 2, env.width), 0), max(min(front_pos + 5, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
+                    write_range(row_i, front_pos + 2, front_pos + 5, self.TEXTURE[TRAIN_GLASS])
                 if car_i != self.car_n - 1:
-                    left, right = max(min(front_pos + self.CAR_LENGTH - 4, env.width), 0), max(min(front_pos + self.CAR_LENGTH - 1, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
+                    write_range(row_i, front_pos + self.CAR_LENGTH - 4, front_pos + self.CAR_LENGTH - 1, self.TEXTURE[TRAIN_GLASS])
                 else:
-                    left, right = max(min(front_pos + self.CAR_LENGTH - 5, env.width), 0), max(min(front_pos + self.CAR_LENGTH - 3, env.width), 0)
-                    env.array[row_i][left: right] = [self.TEXTURE[TRAIN_GLASS] for _ in range(right - left)]
-                    partial_write_res.append((row_i, (left, right)))
-
-                # 貫通路
-                if car_i != self.car_n - 1:
-                    left, right = max(min(front_pos + self.CAR_LENGTH + 1, env.width), 0), max(min(front_pos + self.CAR_LENGTH + 5, env.width), 0)
+                    write_range(row_i, front_pos + self.CAR_LENGTH - 5, front_pos + self.CAR_LENGTH - 3, self.TEXTURE[TRAIN_GLASS])
+                if car_i != self.car_n - 1:  # 貫通路
                     for row_i in range(3, 7):
-                        env.array[row_i][left: right] = [self.TEXTURE[GRAY_PARTS] for _ in range(right - left)]
-                        partial_write_res.append((row_i, (left, right)))
-
-            # 車輪
-            for col_i in range(6, self.CAR_LENGTH, self.CAR_LENGTH * 2 // 3 + 1):
-                if 0 <= front_pos + col_i < env.width // 4:
-                    env.array[7][front_pos + col_i] = WHEEL_TEXTURES[pos % 2]
-                    partial_write_res.append((7, (front_pos + col_i, front_pos + col_i + 1)))
-                if 0 <= front_pos + col_i + 4 < env.width // 4:
-                    env.array[7][front_pos + col_i + 4] = WHEEL_TEXTURES[pos % 2]
-                    partial_write_res.append((7, (front_pos + col_i + 4, front_pos + col_i + 5)))
+                        write_range(row_i, front_pos + self.CAR_LENGTH + 1, front_pos + self.CAR_LENGTH + 5, self.TEXTURE[GRAY_PARTS])
+            
+            for col_i in range(6, self.CAR_LENGTH, self.CAR_LENGTH * 2 // 3 + 1):  # 車輪
+                write_spot(7, front_pos + col_i, WHEEL_TEXTURES[pos % 2], end_lim=env.width // 4)
+                write_spot(7, front_pos + col_i + 4, WHEEL_TEXTURES[pos % 2], end_lim=env.width // 4)
                 # 車輪の1マス後ろをリセット
-                if 0 <= front_pos + col_i + 1 < env.width // 4:
-                    env.array[7][front_pos + col_i + 1] = EMPTY_TEXTURE
-                    partial_write_res.append((7, (front_pos + col_i + 1, front_pos + col_i + 2)))
-                if 0 <= front_pos + col_i + 5 < env.width // 4:
-                    env.array[7][front_pos + col_i + 5] = EMPTY_TEXTURE
-                    partial_write_res.append((7, (front_pos + col_i + 5, front_pos + col_i + 6)))
-
-            # 床下機器
-            for col_i in range(18, self.CAR_LENGTH * 2 // 3, 6):
-                left, right = max(min(front_pos + col_i, env.width // 4), 0), max(min(front_pos + col_i + 3, env.width // 4), 0)
-                env.array[7][left: right] = [BOTTOM_EQUIPMENTS_TEXTURE for _ in range(right - left)]
-                partial_write_res.append((7, (front_pos + col_i, front_pos + col_i + 4)))
+                write_spot(7, front_pos + col_i + 1, EMPTY_TEXTURE, end_lim=env.width // 4)
+                write_spot(7, front_pos + col_i + 5, EMPTY_TEXTURE, end_lim=env.width // 4)
+            
+            for col_i in range(18, self.CAR_LENGTH * 2 // 3, 6):  # 床下機器
+                write_range(7, front_pos + col_i, front_pos + col_i + 3, BOTTOM_EQUIPMENTS_TEXTURE, end_lim=env.width // 4)
                 # 1マス後ろをリセット
-                if 0 <= front_pos + col_i + 4 < env.width // 4:
-                    env.array[7][front_pos + col_i + 4] = EMPTY_TEXTURE
-                    partial_write_res.append((7, (front_pos + col_i + 4, front_pos + col_i + 5)))
+                write_spot(7, front_pos + col_i + 4, EMPTY_TEXTURE, end_lim=env.width // 4)
         
         return partial_write_res
 
@@ -327,7 +264,7 @@ class Environment(PartialWriter):
             return None
         self.array[y][x] = val
 
-    def stopping(self, from_x: int, train: Train, base_interval: int = 500):
+    def stopping(self, from_x: int, train: Train, base_interval: int = 250):
         """
         from_x から原点まで移動して停車する．
         直線運動モデルを仮定して，描画インターバルを変化させて滑らかに止める．
@@ -356,7 +293,7 @@ class Environment(PartialWriter):
                 sleep((t - next_t) * base_interval / 1000)
                 t = next_t
 
-    def leaving(self, to_x: int, train: Train, base_interval: int = 500):
+    def leaving(self, to_x: int, train: Train, base_interval: int = 250):
         """
         原点から to_x まで移動する．
         直線運動モデルを仮定して，描画インターバルを変化させて滑らかに止める．
