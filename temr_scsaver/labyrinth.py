@@ -6,6 +6,7 @@ import shutil
 from time import sleep
 from typing import Final, List, Set, Tuple
 
+from core.color import Color
 from core.partial_writer import PartialWriter
 
 
@@ -17,9 +18,9 @@ GOAL  = 4
 TEXTURE = [
     " ",
     "█",
-    "\u001b[00;32m█\u001b[00m",
-    "\u001b[00;36m█\u001b[00m",
-    "\u001b[00;35m█\u001b[00m",
+    Color.ansi_colored('█', Color.GREEN),
+    Color.ansi_colored('█', Color.CYAN),
+    Color.ansi_colored('█', Color.MAGENTA),
 ]
 # 4近傍確認用
 dx = [-1, 1, 0, 0]
@@ -28,7 +29,7 @@ dy = [0, 0, -1, 1]
 
 class Labyrinth(PartialWriter):
     def __init__(self, width: int, height: int) -> None:
-        super().__init__(height)
+        super().__init__(height=height, width=width)
         self.width: Final[int] = width
         self.height: Final[int] = height
         self.array = [[TEXTURE[WALL] for _ in range(width)] for _ in range(height)]
@@ -48,9 +49,9 @@ class Labyrinth(PartialWriter):
         here = (begin_x, begin_y)
         open_cells.append(here)
         self.array[begin_y][begin_x] = TEXTURE[EMPTY]
+        self.set_line_updated_range(begin_y, (begin_x, begin_x + 1))
         while len(open_cells):
             # 4近傍のどれかに進みたい．ランダムな順番に見ていく
-            found = False  # どこにも進めない場合 False
             for next in sample(list(range(4)), 4):
                 next1_x = here[0] + dx[next]
                 next1_y = here[1] + dy[next]
@@ -66,13 +67,12 @@ class Labyrinth(PartialWriter):
                     self.array[next1_y][next1_x] = self.array[next2_y][next2_x] = TEXTURE[EMPTY]  # 道にする
                     here = (next2_x, next2_y)  # 次の開始地点
                     open_cells.append(here)
-                    found = True
                     self.set_line_updated_range(next1_y, (next1_x, next1_x + 1))
                     self.set_line_updated_range(next2_y, (next2_x, next2_x + 1))
                     self.partial_write()
                     sleep(interval_ms / 1000)
                     break
-            if not found:
+            else:  # どこにも進めない場合
                 here = sample(open_cells, 1)[0]
                 open_cells.remove(here)
 

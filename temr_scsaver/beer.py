@@ -5,6 +5,7 @@ from random import random
 import shutil
 from time import sleep
 
+from core.color import Color
 from core.partial_writer import PartialWriter
 
 
@@ -16,31 +17,31 @@ BLACK_BEER = 4
 TEXTURE = [
     " ",
     "█",
-    "\u001b[00;33m█\u001b[00m",
-    "\u001b[00;37m█\u001b[00m",
-    "\u001b[00;30m█\u001b[00m",
+    Color.ansi_colored('█', Color.YELLOW),
+    Color.ansi_colored('█', Color.WHITE),
+    Color.ansi_colored('█', Color.BLACK),
 ]
 WAVE_TOP = [
     " ",
-    "\u001b[00;37m▂\u001b[00m",
+    Color.ansi_colored('▂', Color.WHITE),
     " ",
     " ",
     " ",
     " ",
 ]
 WAVE_BUTTOM = [
-    "\u001b[00;37m█\u001b[00m",
-    "\u001b[00;37m█\u001b[00m",
-    "\u001b[00;37m█\u001b[00m",
-    "\u001b[00;37m▇\u001b[00m",
-    "\u001b[00;37m▆\u001b[00m",
-    "\u001b[00;37m▇\u001b[00m",
+    Color.ansi_colored('█', Color.WHITE),
+    Color.ansi_colored('█', Color.WHITE),
+    Color.ansi_colored('█', Color.WHITE),
+    Color.ansi_colored('▇', Color.WHITE),
+    Color.ansi_colored('▆', Color.WHITE),
+    Color.ansi_colored('▇', Color.WHITE),
 ]
 
 
 class Beer(PartialWriter):
     def __init__(self) -> None:
-        super().__init__(height=10)
+        super().__init__(height=10, width=12)
         self.diameter = 8
         self.array = [[TEXTURE[EMPTY] for _ in range(12)]]
         self.array.extend([[
