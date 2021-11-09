@@ -1,3 +1,4 @@
+# c.f. https://jp.piliapp.com/symbol/square/
 # c.f. https://misc.flogisoft.com/bash/tip_colors_and_formatting
 
 class Color:

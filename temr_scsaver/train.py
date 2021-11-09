@@ -242,10 +242,24 @@ class Keikyu(TrainWith3Doors):
         None,
         Color.char_256_colored('█', 242),
         Color.char_256_colored('█', 196),
-        Color.char_256_colored('█', 254),
-        Color.char_256_colored('█', 251),
+        Color.char_256_colored('█', 255),
+        Color.char_256_colored('█', 253),
         Color.char_256_colored('█', 160),
         Color.char_256_colored('█', 160),
+    ]
+
+class JRW223(TrainWith3Doors):
+    TEXTURE = [
+        Color.char_256_colored('█', 248),
+        Color.char_256_colored('█', 248),
+        Color.char_256_colored('█', 81),
+        None,
+        Color.char_256_colored('█', 242),
+        Color.char_256_colored('▄', 226, 21),
+        Color.char_256_colored('█', 248),
+        Color.char_256_colored('█', 246),
+        Color.char_256_colored('▄', 3, 20),
+        Color.char_256_colored('█', 246),
     ]
 
 
@@ -255,6 +269,7 @@ AVAILABLE_TRAINS = [
     OsakaMetroChuo,
     Hankyu,
     Keikyu,
+    JRW223,
 ]
 
 
@@ -346,7 +361,7 @@ def train():
         system('clear')
         print('\n' * height)  # ターミナル画面の下に押し付けないと，カーソル移動による描画処理が正しく行われない
         env = Environment(width)
-        # train = Keikyu()
+        # train = JRW223()
         train = choice(AVAILABLE_TRAINS)()
         print(env)
         env.stopping(width * 3 // 4, train)
