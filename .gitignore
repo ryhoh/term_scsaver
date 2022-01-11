@@ -1,0 +1,6 @@
+.vscode/*
+env/*
+temr_scsaver/build/*
+temr_scsaver/*.spec
+other_lang/*
+*.pyc
