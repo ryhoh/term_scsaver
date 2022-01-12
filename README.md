@@ -5,6 +5,7 @@
 This is collection of animation commands.  
 
 ![Animated GIF-downsized (1)](https://user-images.githubusercontent.com/16788328/149077545-7d410dc4-c534-41b9-be09-5e59d158f64e.gif)
+
 👆 I brewed it.
 
 ## How to use?
